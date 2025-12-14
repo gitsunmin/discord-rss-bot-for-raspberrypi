@@ -37,8 +37,8 @@ bot-monitor.log
 monitor.sh
 clear-cache
 
-# Configuration (comment out if you want to track feeds.json)
-# feeds.json
+# Configuration files with sensitive information
+feeds.json
 
 # Temporary files
 tmp/

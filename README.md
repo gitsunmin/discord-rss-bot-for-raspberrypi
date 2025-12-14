@@ -1,4 +1,4 @@
-# Discord RSS Bot v2.0 🚀
+# Discord RSS Bot For Raspberry Pi
 
 > 🤖 라즈베리파이 최적화된 안정적인 RSS → Discord 자동 전송 봇
 
@@ -75,8 +75,8 @@
 #### 🖥️ **일반 환경**
 ```bash
 # 저장소 클론
-git clone https://github.com/gitsunmin/discord-rss-bot.git
-cd discord-rss-bot
+git clone https://github.com/gitsunmin/discord-rss-bot-for-raspberrypi.git
+cd discord-rss-bot-for-raspberrypi
 
 # 의존성 설치
 npm install
@@ -101,8 +101,8 @@ sudo dphys-swapfile setup
 sudo dphys-swapfile swapon
 
 # 프로젝트 클론 및 설치
-git clone https://github.com/gitsunmin/discord-rss-bot.git
-cd discord-rss-bot
+git clone https://github.com/gitsunmin/discord-rss-bot-for-raspberrypi.git
+cd discord-rss-bot-for-raspberrypi
 npm install
 
 # 라즈베리파이 최적화 빌드
@@ -272,7 +272,7 @@ pm2 list
 ### 로그 확인
 ```bash
 # PM2 로그 실시간 확인
-pm2 logs discord-rss-bot
+pm2 logs discord-rss-bot-for-raspberrypi
 
 # 로그 파일 직접 확인 (날짜별)
 tail -f logs/$(date +%Y-%m-%d).log
@@ -290,7 +290,7 @@ pm2 monit
 pm2 list
 
 # 자세한 정보
-pm2 show discord-rss-bot
+pm2 show discord-rss-bot-for-raspberrypi
 ```
 
 ### 성능 최적화
@@ -401,7 +401,7 @@ sudo nano /etc/fstab
 # 로그 로테이션 설정
 sudo nano /etc/logrotate.d/discord-bot
 # 내용:
-# /home/pi/discord-rss-bot/logs/*.log {
+# /home/pi/discord-rss-bot-for-raspberrypi/logs/*.log {
 #     daily
 #     missingok
 #     rotate 7
@@ -541,7 +541,7 @@ echo "CPU 온도: $(vcgencmd measure_temp)"
 echo "메모리 사용량: $(free -h | grep Mem)"
 echo "디스크 사용량: $(df -h / | tail -1)"
 echo "봇 프로세스:"
-pm2 list | grep discord-rss-bot
+pm2 list | grep discord-rss-bot-for-raspberrypi
 echo "최근 로그:"
 tail -5 logs/$(date +%Y-%m-%d).log
 echo "================================"
@@ -550,7 +550,7 @@ EOF
 chmod +x monitor.sh
 
 # 크론잡으로 1시간마다 모니터링
-echo "0 * * * * /home/pi/discord-rss-bot/monitor.sh >> /home/pi/bot-monitor.log" | crontab -
+echo "0 * * * * /home/pi/discord-rss-bot-for-raspberrypi/monitor.sh >> /home/pi/bot-monitor.log" | crontab -
 ```
 
 ### 🔄 백업 및 복구

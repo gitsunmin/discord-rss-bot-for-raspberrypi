@@ -1,0 +1,33 @@
+{
+    "settings": {
+        "checkIntervalMinutes": 60,
+        "maxDescriptionLength": 300,
+        "cacheSize": 100,
+        "useEmbeds": true
+    },
+    "feeds": [
+        {
+            "name": "네이버 뉴스 - IT",
+            "url": "https://feeds.feedburner.com/geeknews-feed",
+            "channelId": "YOUR_DISCORD_CHANNEL_ID_HERE",
+            "description": "한국의 IT 뉴스를 제공하는 GeekNews 피드",
+            "color": "#00C851",
+            "thumbnail": "https://feeds.feedburner.com/geeknews-feed"
+        },
+        {
+            "name": "테크크런치",
+            "url": "https://techcrunch.com/feed/",
+            "channelId": "YOUR_DISCORD_CHANNEL_ID_HERE", 
+            "description": "글로벌 스타트업 및 기술 뉴스",
+            "color": "#0AAD00"
+        },
+        {
+            "name": "예시 RSS 피드",
+            "url": "https://example.com/rss",
+            "channelId": "1234567890123456789",
+            "description": "이 부분은 선택사항입니다",
+            "color": "#FF5733",
+            "thumbnail": "https://example.com/logo.png"
+        }
+    ]
+}

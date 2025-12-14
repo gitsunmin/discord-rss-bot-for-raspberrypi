@@ -218,9 +218,13 @@ class SystemManager {
 // 설정 파일 로딩 및 검증
 class ConfigManager {
     private static readonly CONFIG_FILE = 'feeds.json';
+    private static readonly EXAMPLE_FILE = 'feeds.json.example';
 
     static async loadConfig(): Promise<FeedsData> {
         try {
+            // feeds.json 파일이 없으면 예시 파일에서 복사
+            await this.ensureConfigFile();
+
             const configPath = path.resolve(this.CONFIG_FILE);
             const data = await fs.readFile(configPath, 'utf-8');
             const config: FeedsData = JSON.parse(data);
@@ -236,6 +240,23 @@ class ConfigManager {
                 Logger.error('설정 파일을 읽을 수 없습니다:', error);
             }
             throw error;
+        }
+    }
+
+    private static async ensureConfigFile(): Promise<void> {
+        try {
+            // feeds.json이 존재하는지 확인
+            await fs.access(this.CONFIG_FILE);
+        } catch (error) {
+            // 파일이 없으면 예시 파일에서 복사
+            try {
+                await fs.copyFile(this.EXAMPLE_FILE, this.CONFIG_FILE);
+                Logger.warning('feeds.json 파일이 없어서 feeds.json.example에서 복사했습니다.');
+                Logger.info('💡 feeds.json 파일을 수정하여 실제 채널 ID와 설정을 입력하세요.');
+            } catch (copyError) {
+                Logger.error('feeds.json.example 파일을 찾을 수 없습니다. 설정 파일을 수동으로 생성하세요.');
+                throw new Error('설정 파일이 없습니다. feeds.json.example을 feeds.json으로 복사하고 설정을 수정하세요.');
+            }
         }
     }
 
