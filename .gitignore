@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production builds
+dist/
+build/
+coverage/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Bot runtime files
+feed_cache.json
+bot_status.json
+
+# Logs directory and files
+logs/
+*.log
+pm2-*.log
+
+# Editor and OS files
+.DS_Store
+.DS_Store?
+._*
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Raspberry Pi monitoring
+bot-monitor.log
+monitor.sh
+clear-cache
+
+# Configuration (comment out if you want to track feeds.json)
+# feeds.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.backup

@@ -1,0 +1,25 @@
+{
+    "settings": {
+        "checkIntervalMinutes": 60,
+        "maxDescriptionLength": 300,
+        "cacheSize": 100,
+        "useEmbeds": true
+    },
+    "feeds": [
+        {
+            "name": "네이버 뉴스 - IT",
+            "url": "https://feeds.feedburner.com/geeknews-feed",
+            "channelId": "1422425203430133780",
+            "description": "한국의 IT 뉴스를 제공하는 GeekNews 피드",
+            "color": "#00C851",
+            "thumbnail": "https://feeds.feedburner.com/geeknews-feed"
+        },
+        {
+            "name": "테크크런치",
+            "url": "https://techcrunch.com/feed/",
+            "channelId": "1422425203430133780",
+            "description": "글로벌 스타트업 및 기술 뉴스",
+            "color": "#0AAD00"
+        }
+    ]
+}
