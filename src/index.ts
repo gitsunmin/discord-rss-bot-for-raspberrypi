@@ -9,7 +9,7 @@ dotenv.config();
 
 // 상수 정의
 const MAX_INITIAL_ITEMS = 3; // 초기 실행 시 최대 메시지 개수
-const MAX_RUNTIME_ITEMS = 10; // 일반 실행 시 최대 메시지 개수
+const MAX_RUNTIME_ITEMS = 20; // 일반 실행 시 최대 메시지 개수
 const HEALTH_CHECK_INTERVAL = 5 * 60 * 1000; // 5분마다 헬스체크
 const NETWORK_TIMEOUT = 15000; // 15초 네트워크 타임아웃
 const MAX_RETRIES = 3; // 최대 재시도 횟수
@@ -301,7 +301,7 @@ class RSSBot {
     private readonly defaultSettings = {
         checkIntervalMinutes: 60,
         maxDescriptionLength: 300,
-        cacheSize: 50, // 라즈베리파이를 위해 축소
+        cacheSize: 100, // 라즈베리파이를 위해 축소
         useEmbeds: true
     };
 
@@ -396,7 +396,7 @@ class RSSBot {
             await this.loadCache();
 
             // Discord 봇 로그인
-            this.client.once('ready', async () => {
+            this.client.once('clientReady', async () => {
                 Logger.success(`봇이 ${this.client.user?.tag}으로 로그인했습니다!`);
                 Logger.info(`📡 ${this.config.feeds.length}개의 RSS 피드를 모니터링합니다.`);
                 Logger.info(`⏰ 확인 주기: ${this.checkInterval / 60000}분`);
@@ -532,13 +532,30 @@ class RSSBot {
         }
     }
 
+    private isSavingCache = false;
+    private cacheSaveQueue: Promise<void> = Promise.resolve();
+
+    // 안전한 캐시 저장
     private async saveCache(): Promise<void> {
-        try {
-            const cachePath = path.resolve(this.cacheFile);
-            await fs.writeFile(cachePath, JSON.stringify(this.cache, null, 2));
-        } catch (error) {
-            Logger.error('캐시 저장 실패:', error);
-        }
+        // 큐에 추가하여 순차적으로 저장
+        this.cacheSaveQueue = this.cacheSaveQueue.then(async () => {
+            if (this.isSavingCache) {
+                return;
+            }
+
+            this.isSavingCache = true;
+            try {
+                const cachePath = path.resolve(this.cacheFile);
+                await fs.writeFile(cachePath, JSON.stringify(this.cache, null, 2));
+                Logger.debug('캐시 저장 완료');
+            } catch (error) {
+                Logger.error('캐시 저장 실패:', error);
+            } finally {
+                this.isSavingCache = false;
+            }
+        });
+
+        return this.cacheSaveQueue;
     }
 
     private async checkAllFeeds(): Promise<void> {
@@ -555,7 +572,7 @@ class RSSBot {
         this.status.totalChecks++;
         this.status.lastCheck = startTime;
 
-        const promises = this.config.feeds.map(async (feed) => {
+        for (const feed of this.config.feeds) {
             try {
                 await this.checkFeed(feed);
                 successCount++;
@@ -564,9 +581,10 @@ class RSSBot {
                 Logger.error(`${feed.name} 확인 실패:`, error);
                 await this.handleFeedError(feed, error);
             }
-        });
 
-        await Promise.allSettled(promises);
+            // 피드 간 간격 (race condition 추가 방지)
+            await this.sleep(1000);
+        }
 
         // 상태 업데이트
         if (errorCount === 0) {
@@ -583,13 +601,16 @@ class RSSBot {
         await this.saveStatus();
     }
 
+    private feedErrorCount: Map<string, number> = new Map();
+
     private async handleFeedError(feed: FeedConfig, error: any): Promise<void> {
-        // 에러 카운터 관리 (간단한 메모리 기반)
-        const errorKey = `error_${feed.url}`;
-        const errorCount = (this.cache[errorKey]?.length || 0) + 1;
+        const errorCount = (this.feedErrorCount.get(feed.url) || 0) + 1;
+        this.feedErrorCount.set(feed.url, errorCount);
 
         if (errorCount >= 5) {
-            Logger.warning(`${feed.name}: 5회 연속 실패, URL 확인 필요`);
+            Logger.warning(`${feed.name}: ${errorCount}회 연속 실패, URL 및 네트워크 상태 확인 필요`);
+        } else if (errorCount >= 3) {
+            Logger.warning(`${feed.name}: ${errorCount}회 실패`);
         }
     }
 
@@ -616,14 +637,12 @@ class RSSBot {
                     Boolean(item.link && !cachedLinks.includes(item.link))
                 )
                 .sort((a, b) => {
-                    // 시간순 정렬 (오래된 것부터)
                     const dateA = a.pubDate ? new Date(a.pubDate).getTime() : 0;
                     const dateB = b.pubDate ? new Date(b.pubDate).getTime() : 0;
                     return dateA - dateB;
                 });
 
             if (newItems.length > 0) {
-                // 초기 실행 시 메시지 개수 제한
                 const maxItems = this.status.isFirstRun ? MAX_INITIAL_ITEMS : MAX_RUNTIME_ITEMS;
                 const itemsToSend = newItems.slice(0, maxItems);
 
@@ -638,26 +657,8 @@ class RSSBot {
                     throw new Error('텍스트 채널을 찾을 수 없습니다.');
                 }
 
-                for (const item of itemsToSend) {
-                    try {
-                        await this.sendFeedItem(channel, feedConfig, item);
-
-                        // 캐시에 추가
-                        this.cache[feedConfig.url].push({
-                            link: item.link,
-                            sentAt: Date.now(),
-                            title: item.title
-                        });
-
-                        // 전송 간격 (라즈베리파이 안정성을 위해 증가)
-                        await this.sleep(2000);
-                    } catch (sendError) {
-                        Logger.error(`메시지 전송 실패 (${feedConfig.name}):`, sendError);
-                    }
-                }
-
-                // 전송하지 않은 나머지 아이템도 캐시에 추가 (중복 방지)
-                for (const item of newItems.slice(itemsToSend.length)) {
+                // 먼저 모든 새 아이템을 캐시에 추가 (전송 전)
+                for (const item of newItems) {
                     this.cache[feedConfig.url].push({
                         link: item.link,
                         sentAt: Date.now(),
@@ -672,7 +673,35 @@ class RSSBot {
                         .slice(-settings.cacheSize);
                 }
 
-                await this.saveCache();
+                // 메시지 전송
+                let sentCount = 0;
+                for (const item of itemsToSend) {
+                    try {
+                        await this.sendFeedItem(channel, feedConfig, item);
+                        sentCount++;
+                        Logger.debug(`  ✓ 전송: ${item.title?.substring(0, 40)}...`);
+
+                        // 전송 간격
+                        await this.sleep(2000);
+                    } catch (sendError) {
+                        Logger.error(`메시지 전송 실패 (${feedConfig.name}):`, sendError);
+
+                        // 전송 실패 시 캐시에서 제거
+                        const index = this.cache[feedConfig.url].findIndex(
+                            cached => cached.link === item.link
+                        );
+                        if (index > -1) {
+                            this.cache[feedConfig.url].splice(index, 1);
+                        }
+                    }
+                }
+
+                if (sentCount > 0) {
+                    Logger.success(`${feedConfig.name}: ${sentCount}개 메시지 전송 완료`);
+                }
+
+            } else {
+                Logger.debug(`${feedConfig.name}: 새 글 없음`);
             }
 
             // 성공 시 재시도 카운터 리셋
@@ -684,14 +713,13 @@ class RSSBot {
 
             if (currentRetries < MAX_RETRIES) {
                 this.retryAttempts.set(retryKey, currentRetries + 1);
-                Logger.warning(`${feedConfig.name} 재시도 ${currentRetries + 1}/${MAX_RETRIES}: ${error}`);
+                Logger.warning(`${feedConfig.name} 재시도 ${currentRetries + 1}/${MAX_RETRIES}`);
 
-                // 지수 백오프로 재시도
                 await this.sleep(Math.pow(2, currentRetries) * 1000);
                 return this.checkFeed(feedConfig);
             } else {
                 this.retryAttempts.delete(retryKey);
-                throw new Error(`${feedConfig.name} 피드 확인 실패 (${MAX_RETRIES}회 재시도 후): ${error}`);
+                throw new Error(`${feedConfig.name} 피드 확인 실패 (${MAX_RETRIES}회 재시도 후)`);
             }
         }
     }
