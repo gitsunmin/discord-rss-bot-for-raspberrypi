@@ -116,6 +116,7 @@ interface FeedConfig {
     description?: string;
     color?: string; // 임베드 색상 (hex)
     thumbnail?: string; // 썸네일 URL
+    registeredAt?: string; // 피드 등록 시간 (ISO 8601)
 }
 
 interface FeedCacheItem {
@@ -228,6 +229,22 @@ class ConfigManager {
             const configPath = path.resolve(this.CONFIG_FILE);
             const data = await fs.readFile(configPath, 'utf-8');
             const config: FeedsData = JSON.parse(data);
+
+            // registeredAt이 없는 피드에 자동으로 현재 시간 추가
+            let configUpdated = false;
+            for (const feed of config.feeds) {
+                if (!feed.registeredAt) {
+                    feed.registeredAt = new Date().toISOString();
+                    configUpdated = true;
+                    Logger.info(`${feed.name}: registeredAt 자동 설정 (${feed.registeredAt})`);
+                }
+            }
+
+            // 변경사항이 있으면 파일에 저장
+            if (configUpdated) {
+                await fs.writeFile(configPath, JSON.stringify(config, null, 4));
+                Logger.success('feeds.json에 registeredAt 필드가 자동으로 추가되었습니다.');
+            }
 
             this.validateConfig(config);
             Logger.success(`설정 파일 로드 완료: ${config.feeds.length}개 피드`);
@@ -632,10 +649,26 @@ class RSSBot {
             }
 
             const cachedLinks = this.cache[feedConfig.url].map(item => item.link);
+
+            // 등록 시간 가져오기
+            const registeredTime = feedConfig.registeredAt
+                ? new Date(feedConfig.registeredAt).getTime()
+                : 0;
+
             const newItems = feed.items
-                .filter((item): item is RSSItem & { link: string } =>
-                    Boolean(item.link && !cachedLinks.includes(item.link))
-                )
+                .filter((item): item is RSSItem & { link: string } => {
+                    if (!item.link || cachedLinks.includes(item.link)) {
+                        return false;
+                    }
+
+                    // 등록 시간이 설정되어 있으면 해당 시간 이후의 글만 허용
+                    if (registeredTime > 0 && item.pubDate) {
+                        const pubTime = new Date(item.pubDate).getTime();
+                        return pubTime >= registeredTime;
+                    }
+
+                    return true;
+                })
                 .sort((a, b) => {
                     const dateA = a.pubDate ? new Date(a.pubDate).getTime() : 0;
                     const dateB = b.pubDate ? new Date(b.pubDate).getTime() : 0;
@@ -648,6 +681,9 @@ class RSSBot {
 
                 if (this.status.isFirstRun && newItems.length > MAX_INITIAL_ITEMS) {
                     Logger.warning(`${feedConfig.name}: 초기 실행으로 ${newItems.length}개 중 ${MAX_INITIAL_ITEMS}개만 전송`);
+                } else if (feedConfig.registeredAt) {
+                    const regDate = new Date(feedConfig.registeredAt).toLocaleDateString('ko-KR');
+                    Logger.info(`📰 ${feedConfig.name}: ${itemsToSend.length}개의 새 글 발견 (${regDate} 이후)`);
                 } else {
                     Logger.info(`📰 ${feedConfig.name}: ${itemsToSend.length}개의 새 글 발견`);
                 }

@@ -23,6 +23,7 @@
 - **경량 아키텍처**: 핵심 기능 중심의 최적화된 성능
 
 ### **운영 편의성**
+- **등록 시점 기반 전송**: 새 피드 등록 시 해당 시점 이후의 글만 전송 (메시지 폭주 완전 방지)
 - **초기 실행 제어**: 첫 실행 시 메시지 폭주 방지 (피드당 최대 3개 제한)
 - **Rich Embed 지원**: 구조화된 Discord 임베드 메시지 포맷
 - **통합 로깅**: 파일 기반 로그 시스템 및 자동 로테이션
@@ -177,14 +178,16 @@ LOG_LEVEL=info
       "channelId": "1234567890123456789",
       "description": "한국의 IT 뉴스를 제공하는 GeekNews 피드",
       "color": "#00C851",
-      "thumbnail": "https://example.com/geek-logo.png"
+      "thumbnail": "https://example.com/geek-logo.png",
+      "registeredAt": "2026-01-21T00:00:00.000Z"
     },
     {
       "name": "TechCrunch",
       "url": "https://techcrunch.com/feed/",
       "channelId": "1234567890123456789",
       "description": "글로벌 스타트업 및 기술 뉴스",
-      "color": "#0AAD00"
+      "color": "#0AAD00",
+      "registeredAt": "2026-01-21T00:00:00.000Z"
     }
   ]
 }
@@ -200,6 +203,14 @@ LOG_LEVEL=info
 | `useEmbeds` | 임베드 메시지 사용 여부 | true |
 | `color` | 임베드 색상 (hex) | #0099FF |
 | `thumbnail` | 피드 썸네일 URL | - |
+| `registeredAt` | 피드 등록 시간 (ISO 8601) | 자동 설정 |
+
+**💡 중요: `registeredAt` 필드**
+
+- 새로운 피드를 추가할 때 **등록 시간 이후의 글만** 전송됩니다
+- `registeredAt`을 명시하지 않으면 **봇 시작 시점**이 자동으로 설정됩니다
+- 과거 글을 받고 싶다면 과거 날짜로 설정하세요 (예: `"2026-01-01T00:00:00.000Z"`)
+- ISO 8601 형식을 사용하세요: `YYYY-MM-DDTHH:mm:ss.sssZ`
 
 ## 6. 실행 방법
 
