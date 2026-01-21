@@ -13,6 +13,7 @@
             "description": "한국의 IT 뉴스를 제공하는 GeekNews 피드",
             "color": "#00C851",
             "thumbnail": "https://feeds.feedburner.com/geeknews-feed"
+            "registeredAt": "2026-01-21T00:00:00.000Z"
         },
         {
             "name": "테크크런치",
@@ -20,6 +21,7 @@
             "channelId": "YOUR_DISCORD_CHANNEL_ID_HERE", 
             "description": "글로벌 스타트업 및 기술 뉴스",
             "color": "#0AAD00"
+            "registeredAt": "2026-01-21T00:00:00.000Z"
         },
         {
             "name": "예시 RSS 피드",
@@ -28,6 +30,7 @@
             "description": "이 부분은 선택사항입니다",
             "color": "#FF5733",
             "thumbnail": "https://example.com/logo.png"
+            "registeredAt": "2026-01-21T00:00:00.000Z"
         }
     ]
 }
